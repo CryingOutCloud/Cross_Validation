@@ -1,0 +1,101 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Jun  3 13:12:21 2019
+
+@author: noahb
+"""
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.model_selection import KFold
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.svm import SVR
+
+
+
+from sklearn.datasets import load_boston
+
+sample_data = load_boston()
+    # loads the sample boston housing dataset from scikit learn
+dataset = pd.DataFrame(sample_data.data, columns=sample_data.feature_names)
+    # converts the data into a pandas dataframe
+    # only feature (X) columns are loaded
+dataset['MEDV'] = sample_data.target
+    # adds another column (y) to the dataframe (target variable of boston data)
+
+
+#boston.isnull().sum()
+    # returns the number of missing values (none with this example)
+
+# dataset = pd.read_csv("Downloads/Boston_House.csv")
+    # reads data from a csv file, no longer using in this example
+    
+    
+X = dataset.iloc[:, [0, 12]]
+y = dataset.iloc[:, 13]
+    # seperate data from dataset into X and y
+
+scaler = MinMaxScaler(feature_range=(0,1))
+X = scaler.fit_transform(X)
+    # normalizes data to values between 0 and 1
+
+scores = []
+    # for storing error values of each fold
+best_svr = SVR(kernel = 'rbf')
+    # rbf is an alternative to polynomial regressions
+    # fits a model, default parameters
+cv = KFold(n_splits = 10, random_state = 42, shuffle = False)
+    # object with K-fold specifications
+
+for train_index, test_index in cv.split(X):
+        # pulls indeces from cv.split
+    
+    #print("Train Index: ", train_index, "\n")
+    #print("Test Index: ", test_index)
+        # prints what was created
+    
+    X_train = X[train_index]
+    X_test = X[test_index]
+    y_train = y[train_index]
+    y_test = y[test_index]
+        # divides X and y into training and testing sets based on the indeces
+    
+    best_svr.fit(X_train, y_train)
+        # fits training data to an SVR regression
+    
+    scores.append(best_svr.score(X_test, y_test))
+        # tests regression against testing data, saving score values into the scores list for each fold
+        # best_svr.score() returns the r^2 value for the fold
+    
+print(np.mean(scores))
+    # prints the mean r^2 value    
+    
+predictions = best_svr.predict(X_test)
+    # predicts the y_test values based on regression
+#plt.scatter(X_test, y_test, color="skyblue")
+#plt.scatter(X_test, predictions)
+    
+    
+    
+# plt.scatter(y_test, predictions)
+    
+
+plt.scatter(range(50), y_test)
+plt.scatter(range(50), predictions)
+
+
+
+# fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(15, 10), sharey=True)
+# axes.plot(X, best_svr.fit(X, y).predict(X))
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
