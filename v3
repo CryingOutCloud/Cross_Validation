@@ -1,0 +1,105 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Jun  5 16:07:31 2019
+
+@author: noahb
+"""
+
+#import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+
+#from sklearn.preprocessing import PolynomialFeatures
+#from sklearn.linear_model import LinearRegression
+from sklearn.svm import SVR
+#from sklearn.pipeline import Pipeline, make_pipeline
+from sklearn.model_selection import ShuffleSplit, KFold
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import mean_squared_error 
+
+#from scipy import interpolate
+from sklearn.datasets import load_boston
+
+
+
+
+sample_data = load_boston()
+    # loads the sample boston housing dataset from scikit learn
+dataset = pd.DataFrame(sample_data.data, columns=sample_data.feature_names)
+    # converts the data into a pandas dataframe
+    # only feature (X) columns are loaded
+dataset['MEDV'] = sample_data.target
+    # adds another column (y) to the dataframe (target variable of boston data)
+dataset = dataset[~np.isnan(dataset).any(axis=1)]
+
+
+X = dataset.iloc[:,range(13)]
+y = dataset.iloc[:, 13]
+    # seperate data from dataset into X and y
+
+#scaler = MinMaxScaler(feature_range=(0,1))
+#X = scaler.fit_transform(X)
+    # normalizes data to values between 0 and 1
+    
+
+
+#Utility variables
+CV_Mean_MSE_small, CV_Var_MSE_small = [],[]
+k_folds_range = np.array([2,4,6,8,10,15,20,25,29,35,39,50,75,100,125,150,175,200,230,260,300,340,380,410,450,500,505])
+
+
+
+for k in k_folds_range:
+    #Reset list at start of loop
+    i_Mean_MSE = []
+    print(k)
+    
+    #Repeat experiment i times
+    for i in range(300):
+        #Reset list at start of loop        
+        Kfold_MSE_list = []
+        
+        #Resample with replacement from original dataset
+        resample = ShuffleSplit(n_splits=1, train_size=505, test_size=1)
+        resample.get_n_splits(X)
+        for subset_index, remaining_index in resample.split(X):
+            X_subset = X.iloc[list(subset_index),:]
+            y_subset = y.iloc[list(subset_index)]
+        
+        #Loop over kfold splits
+        k_fold = KFold(n_splits = k)
+        for train_index, test_index in k_fold.split(X_subset):
+            X_train = X_subset.iloc[train_index]
+            X_test = X_subset.iloc[test_index]
+            y_train = y_subset.iloc[train_index]
+            y_test = y_subset.iloc[test_index]
+            
+            
+            #Fit model on X_train with SVR
+            svr_model = SVR(kernel = 'rbf', gamma='auto')
+            svr_model.fit(X_train, y_train)
+            
+            #Store each Kfold MSE values on X_test
+            Kfold_MSE_list.append(mean_squared_error(y_test, svr_model.predict(X_test)))
+            
+            
+            #Fit model on X_train
+            #pipeline = Pipeline([('polynomialfeatures', PolynomialFeatures(degree=4, include_bias=True, interaction_only=False)), ('linearregression', LinearRegression(copy_X=True, fit_intercept=True, n_jobs=1, normalize=True))])
+            #pipeline.fit(X_train,y_train)
+            
+            #Store each Kfold MSE values on X_test
+            #Kfold_MSE_list.append(mean_squared_error(y_test, pipeline.predict(X_test)))
+            
+            
+        #Average over the K folds for a single "i" iteration
+        i_Mean_MSE.append(np.mean(Kfold_MSE_list))
+        
+    #Average and std for a particular k value over all i iterations
+    CV_Mean_MSE_small.append(np.mean(i_Mean_MSE))
+    CV_Var_MSE_small.append(np.var(i_Mean_MSE, ddof = 1))
+    
+#Convert to numpy for convenience
+CV_Mean_MSE_small  = np.asarray(CV_Mean_MSE_small)
+CV_Var_MSE_small  = np.asarray(CV_Var_MSE_small)
+CV_Std_MSE_small = np.sqrt(CV_Var_MSE_small)
+
